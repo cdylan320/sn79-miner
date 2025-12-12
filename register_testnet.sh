@@ -14,11 +14,12 @@ if [[ -f "${ENV_FILE}" ]]; then
 fi
 
 # ---- User-configurable vars -------------------------------------------------
-VENV="${VENV:-$HOME/btcli-latest}"
+VENV="${VENV:-$SCRIPT_DIR/.venv}"
 JSON_PATH="${JSON_PATH:-/home/ocean/Draven/sn79-miner/bittensor.json}"
 JSON_PASSWORD="${JSON_PASSWORD:-}"
 WALLET_NAME="${WALLET_NAME:-cold_draven}"
 HOTKEY_NAME="${HOTKEY_NAME:-miner}"
+WALLET_PATH="${WALLET_PATH:-$HOME/.bittensor/wallets}"
 NETUID="${NETUID:-366}"
 NETWORK="${NETWORK:-test}"
 NUM_PROCESSES="${NUM_PROCESSES:-1}"
@@ -35,6 +36,13 @@ export MKL_NUM_THREADS="${MKL_NUM_THREADS:-1}"
 # Verbose bittensor logging/progress (can override or unset)
 export BT_LOGGING="${BT_LOGGING:-DEBUG}"
 export BT_PROGRESS="${BT_PROGRESS:-1}"
+# Ensure wallet path and override bittensor default location
+mkdir -p "${WALLET_PATH}"
+export BT_WALLET_PATH="${WALLET_PATH}"
+# If HOME resolves to /root, force it to the current user to avoid permission issues
+if [[ "${HOME}" == "/root" ]]; then
+  export HOME="/home/ocean"
+fi
 
 # ---- Activate venv ----------------------------------------------------------
 if [[ ! -f "${VENV}/bin/activate" ]]; then
@@ -44,51 +52,5 @@ fi
 source "${VENV}/bin/activate"
 
 # ---- Restore wallet and register -------------------------------------------
-python - <<'PY'
-import os
-import time
-from pathlib import Path
-from bittensor_wallet import Wallet
-from bittensor.core.subtensor import Subtensor
-
-json_path = Path(os.environ["JSON_PATH"]).expanduser()
-json_password = os.environ["JSON_PASSWORD"]
-wallet_name = os.environ["WALLET_NAME"]
-hotkey_name = os.environ["HOTKEY_NAME"]
-wallet_path = Path("~/.bittensor/wallets").expanduser()
-network = os.environ["NETWORK"]
-netuid = int(os.environ["NETUID"])
-num_processes = int(os.environ.get("NUM_PROCESSES", 1))
-
-print(f"[info] Using env: json_path={json_path}, wallet={wallet_name}/{hotkey_name}, "
-      f"network={network}, netuid={netuid}, num_processes={num_processes}, "
-      f"OPENBLAS_NUM_THREADS={os.environ.get('OPENBLAS_NUM_THREADS')}, "
-      f"BT_LOGGING={os.environ.get('BT_LOGGING')}, BT_PROGRESS={os.environ.get('BT_PROGRESS')}")
-
-if not json_path.is_file():
-    raise FileNotFoundError(f"JSON file not found at {json_path}")
-
-json_data = json_path.read_text()
-
-w = Wallet(name=wallet_name, hotkey=hotkey_name, path=str(wallet_path))
-w.regenerate_coldkey(json=(json_data, json_password), use_password=False, overwrite=True, suppress=True)
-w.regenerate_hotkey(json=(json_data, json_password), use_password=False, overwrite=True, suppress=True)
-print(f"Restored wallet {wallet_name}/{hotkey_name} at {wallet_path}")
-
-sub = Subtensor(network=network)
-print("[info] Starting register() ...")
-t0 = time.perf_counter()
-resp = sub.register(
-    wallet=w,
-    netuid=netuid,
-    mev_protection=False,
-    wait_for_inclusion=True,
-    wait_for_finalization=True,
-    raise_error=True,
-    num_processes=num_processes,
-)
-elapsed = time.perf_counter() - t0
-print(f"[info] register() completed in {elapsed:.1f}s")
-print("Registration response:", resp)
-PY
+python "${SCRIPT_DIR}/register_pow.py"
 

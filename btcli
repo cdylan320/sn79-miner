@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# btcli wrapper for bittensor Python API
+set -e
+
+# Force proper paths
+export HOME="/home/ocean"
+export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
+mkdir -p "$BT_WALLET_PATH"
+
+# Activate venv
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/.venv/bin/activate"
+
+# Run bittensor CLI
+python -m bittensor.cli "$@"
+
