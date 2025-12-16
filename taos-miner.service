@@ -1,0 +1,26 @@
+[Unit]
+Description=TAOS Bittensor Miner Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=ocean
+WorkingDirectory=/home/ocean/Draven/sn79-miner
+ExecStart=/home/ocean/Draven/sn79-miner/run_miner_service.sh
+ExecStop=/bin/kill -TERM $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=taos-miner
+
+# Security settings
+NoNewPrivileges=true
+ProtectHome=false
+ProtectSystem=strict
+ReadWritePaths=/home/ocean/Draven/sn79-miner/logs
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

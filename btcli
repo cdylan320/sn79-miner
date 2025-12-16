@@ -43,8 +43,11 @@ export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
 # Activate the btcli virtual environment
 source /home/ocean/btcli-latest/bin/activate
 
-# Convert "subnet register" to "s register" (TAO payment method)
-if [[ "$1" == "subnet" && "$2" == "register" ]]; then
+# For btcli v9.16.0, use proper commands
+if [[ "$1" == "--version" || "$1" == "-v" ]]; then
+    btcli --version
+elif [[ "$1" == "subnet" && "$2" == "register" ]]; then
+    # Use TAO payment method
     shift 2
     btcli s register "$@"
 else
