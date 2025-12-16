@@ -7,10 +7,47 @@ export HOME="/home/ocean"
 export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
 mkdir -p "$BT_WALLET_PATH"
 
-# Activate venv
+# Load environment variables from miner.env
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/.venv/bin/activate"
+ENV_FILE="${SCRIPT_DIR}/miner.env"
+if [[ -f "${ENV_FILE}" ]]; then
+  # export all vars defined in the env file
+  set -a
+  source "${ENV_FILE}"
+  set +a
+fi
 
-# Run bittensor CLI
-python -m bittensor.cli "$@"
+# Set additional environment variables needed for registration
+export JSON_PATH="${JSON_PATH:-/home/ocean/Draven/sn79-miner/bittensor.json}"
+export JSON_PASSWORD="${JSON_PASSWORD:-}"
+export WALLET_NAME="${WALLET_NAME:-cold_draven}"
+export HOTKEY_NAME="${HOTKEY_NAME:-miner}"
+export WALLET_PATH="${WALLET_PATH:-$HOME/.bittensor/wallets}"
+export NETUID="${NETUID:-366}"
+export NETWORK="${NETWORK:-test}"
+export NUM_PROCESSES="${NUM_PROCESSES:-32}"
+export USE_TORCH="${USE_TORCH:-1}"
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
+
+# Environment limits to avoid OpenBLAS thread spawn issues
+export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-1}"
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
+export MKL_NUM_THREADS="${MKL_NUM_THREADS:-1}"
+export BT_LOGGING="${BT_LOGGING:-DEBUG}"
+export BT_PROGRESS="${BT_PROGRESS:-1}"
+
+# Use btcli v9.16.0 with TAO payment (not POW)
+export HOME="/home/ocean"
+export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
+
+# Activate the btcli virtual environment
+source /home/ocean/btcli-latest/bin/activate
+
+# Convert "subnet register" to "s register" (TAO payment method)
+if [[ "$1" == "subnet" && "$2" == "register" ]]; then
+    shift 2
+    btcli s register "$@"
+else
+    btcli "$@"
+fi
 

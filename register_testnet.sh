@@ -23,6 +23,7 @@ WALLET_PATH="${WALLET_PATH:-$HOME/.bittensor/wallets}"
 NETUID="${NETUID:-366}"
 NETWORK="${NETWORK:-test}"
 NUM_PROCESSES="${NUM_PROCESSES:-1}"
+LOG_FILE="${LOG_FILE:-$SCRIPT_DIR/pow.log}"
 
 if [[ -z "${JSON_PASSWORD}" ]]; then
   echo "Set JSON_PASSWORD to your bittensor.json password before running." >&2
@@ -42,6 +43,16 @@ export BT_WALLET_PATH="${WALLET_PATH}"
 # If HOME resolves to /root, force it to the current user to avoid permission issues
 if [[ "${HOME}" == "/root" ]]; then
   export HOME="/home/ocean"
+fi
+
+# ---- Logging to file --------------------------------------------------------
+mkdir -p "$(dirname "${LOG_FILE}")"
+# If we're running interactively, tee to both stdout and file.
+# If we're running detached (nohup/system service), avoid tee to prevent double-writing logs.
+if [[ -t 1 ]]; then
+  exec > >(tee -a "${LOG_FILE}") 2>&1
+else
+  exec >> "${LOG_FILE}" 2>&1
 fi
 
 # ---- Activate venv ----------------------------------------------------------
