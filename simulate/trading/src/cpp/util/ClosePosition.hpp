@@ -59,7 +59,7 @@ struct convert<ClosePosition>
         }
 
         for (const auto& [k, val] : o.via.map) {
-            auto key = val.as<std::string_view>();
+            auto key = k.as<std::string_view>();
             if (key == "orderId") {
                 v.id = val.as<OrderID>();
             }

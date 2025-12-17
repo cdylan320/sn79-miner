@@ -71,7 +71,7 @@ OrderPlacementValidator::ExpectedResult
         if (book->sellQueue().empty()) {
             return std::unexpected{OrderErrorCode::EMPTY_BOOK};
         }
-        if (payload->leverage > 0_dec && !balances.m_sellLeverages.empty()){
+        if (payload->leverage > 0_dec && (balances.m_baseLoan > 0_dec || !balances.m_sellLeverages.empty())){
             return std::unexpected{OrderErrorCode::DUAL_POSITION};
         }
         decimal_t volumeWeightedPrice{};
@@ -177,7 +177,7 @@ OrderPlacementValidator::ExpectedResult
         if (book->buyQueue().empty()) {
             return std::unexpected{OrderErrorCode::EMPTY_BOOK};
         }
-        if (payload->leverage > 0_dec && !balances.m_buyLeverages.empty()){
+        if (payload->leverage > 0_dec && (balances.m_quoteLoan > 0_dec || !balances.m_buyLeverages.empty())){
             return std::unexpected{OrderErrorCode::DUAL_POSITION};
         }
         decimal_t volume{};
@@ -333,6 +333,9 @@ OrderPlacementValidator::ExpectedResult
     bool instantTrade = false;
 
     if (payload->direction == OrderDirection::BUY) {
+        if (payload->leverage > 0_dec && (balances.m_baseLoan > 0_dec || !balances.m_sellLeverages.empty())){
+            return std::unexpected{OrderErrorCode::DUAL_POSITION};
+        }
         decimal_t volumeWeightedPrice{};
         if (payload->currency == Currency::BASE){
             decimal_t takerVolume{};
@@ -465,6 +468,9 @@ OrderPlacementValidator::ExpectedResult
 
     }
     else {
+        if (payload->leverage > 0_dec && (balances.m_quoteLoan > 0_dec || !balances.m_buyLeverages.empty())){
+            return std::unexpected{OrderErrorCode::DUAL_POSITION};
+        }
         decimal_t volume{};
         if (payload->currency == Currency::BASE){
             for (auto it = book->buyQueue().crbegin(); it != book->buyQueue().crend(); ++it) {

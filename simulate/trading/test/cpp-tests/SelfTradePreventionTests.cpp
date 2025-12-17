@@ -254,7 +254,7 @@ TEST_F(SelfTradePreventionTest, LimitOrderBuyCO)
         StrEq("ask,301,4,303,2,307,8\n"
               "bid,297,1,291,3\n"));
 
-    placeLimitOrder(exchange, agent3, bookId, OrderDirection::BUY, 1_dec, 301_dec, DEC(1.));
+    placeLimitOrder(exchange, agent3, bookId, OrderDirection::BUY, 2_dec, 301_dec, DEC(0.));
 
     EXPECT_THAT(
         normalizeOutput(taosim::util::captureOutput([&] { book->printCSV(); })),

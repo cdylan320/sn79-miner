@@ -49,11 +49,6 @@ private:
 
     struct Weight { double F, C, N; };
 
-    struct TimestampedTradePrice
-    {
-        Timestamp timestamp{};
-        double price{};
-    };
     
     enum RegimeState {
         NORMAL,
@@ -142,7 +137,6 @@ private:
     Timestamp m_historySize;
     std::normal_distribution<double> m_marketFeedLatencyDistribution;
     std::normal_distribution<double> m_decisionMakingDelayDistribution;
-    std::vector<TimestampedTradePrice> m_tradePrice;
     std::unique_ptr<taosim::stats::Distribution> m_orderPlacementLatencyDistribution;
     std::string m_baseName;
     uint32_t m_catUId;

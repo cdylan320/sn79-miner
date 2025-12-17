@@ -12,6 +12,8 @@ import mmap
 import struct
 import gc
 import pickle
+import os
+import argparse
 from typing import Dict, Any
 from collections import defaultdict
 from taos.im.protocol import STP
@@ -507,7 +509,7 @@ class QueryService:
     
         while True:
             try:
-                self.request_queue.receive(timeout=0.001)
+                self.request_queue.receive(timeout=0.0)
                 bt.logging.warning("Drained stale message from query request queue")
             except posix_ipc.BusyError:
                 break
@@ -587,8 +589,6 @@ class QueryService:
 
 
 if __name__ == '__main__':
-    import argparse
-
     parser = argparse.ArgumentParser()
     bt.wallet.add_args(parser)
     bt.subtensor.add_args(parser)
@@ -603,9 +603,15 @@ if __name__ == '__main__':
     parser.add_argument('--compression.level', type=int, default=1)
     parser.add_argument('--compression.engine', type=str, default='zlib')
     parser.add_argument('--compression.parallel_workers', type=int, default=0)
+    parser.add_argument('--cpu-cores', type=str, default=None)
 
     config = bt.config(parser)
     bt.logging(config=config)
+    
+    if config.cpu_cores:
+        cores = [int(c) for c in config.cpu_cores.split(',')]
+        os.sched_setaffinity(0, set(cores))
+        bt.logging.info(f"Query service assigned to cores: {cores}")
 
     service = QueryService(config)
 

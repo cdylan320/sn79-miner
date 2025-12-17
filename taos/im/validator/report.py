@@ -12,11 +12,11 @@ import pandas as pd
 import posix_ipc
 import mmap
 import struct
-import pickle
 import msgpack
+import argparse    
 
 from typing import Dict
-from collections import deque
+from collections import deque, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from taos.im.neurons.validator import Validator
 from taos.im.protocol.models import TradeInfo, MarketSimulationConfig
@@ -97,8 +97,12 @@ class ReportingService:
         self.prometheus_miners = Gauge('miners', 'Gauge summaries for miner metrics.', [
             'wallet', 'netuid', 'timestamp', 'timestamp_str', 'agent_id',
             'placement', 'base_balance', 'base_loan', 'base_collateral', 'quote_balance', 'quote_loan', 'quote_collateral',
-            'inventory_value', 'inventory_value_change', 'pnl', 'pnl_change',
-            'min_daily_volume','activity_factor', 'sharpe', 'sharpe_penalty', 'sharpe_score', 'unnormalized_score', 'score',
+            'inventory_value', 'inventory_value_change', 'pnl', 'pnl_change', 'total_realized_pnl',
+            'total_daily_volume', 'min_daily_volume', 'total_roundtrip_volume', 'min_roundtrip_volume',
+            'activity_factor', 'activity_factor_realized',
+            'sharpe', 'sharpe_penalty', 'sharpe_unrealized_score', 
+            'sharpe_realized', 'sharpe_realized_penalty', 'sharpe_realized_score', 'sharpe_score', 
+            'unnormalized_score', 'score',
             'miner_gauge_name'
         ])
         self.prometheus_info = Info('neuron_info', "Info summaries for the running validator.", ['wallet', 'netuid'])
@@ -109,7 +113,7 @@ class ReportingService:
 
         while True:
             try:
-                self.request_queue.receive(timeout=0.001)
+                self.request_queue.receive(timeout=0.0)
                 bt.logging.warning("Drained stale message from reporting request queue")
             except posix_ipc.BusyError:
                 break
@@ -147,7 +151,7 @@ class ReportingService:
                     self.response_mem.seek(0)
                     self.response_mem.write(struct.pack('Q', len(result_bytes)))
                     self.response_mem.write(result_bytes)
-                    bt.logging.info(f"Wrote response data ({time.time()-write_start:.4f}s, serialize={serialize_time:.4f}s)")
+                    bt.logging.info(f"Wrote reporting response data ({time.time()-write_start:.4f}s, serialize={serialize_time:.4f}s)")
 
                     self.response_queue.send(b'ready')
                     
@@ -163,9 +167,14 @@ class ReportingService:
         
         self.cleanup()
     
-    async def publish_metrics(self, data):
-        def deserialize_tuple_keys(d):
-            return {eval(k): v for k, v in d.items()}
+    async def publish_metrics(self, data):        
+        def deserialize_to_nested_dict(d):
+            """Convert flat string keys back to nested dict."""
+            result = defaultdict(lambda: defaultdict(float))
+            for key, vol in d.items():
+                uid, book_id = map(int, key.split(':'))
+                result[uid][book_id] = vol
+            return result
 
         self.recent_trades = {
             int(bookId): [TradeInfo(**t) for t in trades] 
@@ -179,13 +188,15 @@ class ReportingService:
             for uid, book_trades in data['recent_miner_trades'].items()
         }
 
-        self.volume_sums = deserialize_tuple_keys(data['volume_sums'])
-        self.maker_volume_sums = deserialize_tuple_keys(data['maker_volume_sums'])
-        self.taker_volume_sums = deserialize_tuple_keys(data['taker_volume_sums'])
-        self.self_volume_sums = deserialize_tuple_keys(data['self_volume_sums'])
-        
-        for key in ['inventory_history', 'activity_factors', 'sharpe_values', 'unnormalized_scores', 
-                    'scores', 'miner_stats', 'initial_balances', 'initial_balances_published',
+        self.volume_sums = deserialize_to_nested_dict(data['volume_sums'])
+        self.maker_volume_sums = deserialize_to_nested_dict(data['maker_volume_sums'])
+        self.taker_volume_sums = deserialize_to_nested_dict(data['taker_volume_sums'])
+        self.self_volume_sums = deserialize_to_nested_dict(data['self_volume_sums'])
+        self.roundtrip_volume_sums = deserialize_to_nested_dict(data['roundtrip_volume_sums'])
+    
+        for key in ['inventory_history', 'realized_pnl_history', 'activity_factors', 
+                    'activity_factors_realized', 'sharpe_values', 
+                    'unnormalized_scores', 'scores', 'miner_stats', 'initial_balances', 'initial_balances_published',
                     'simulation_timestamp', 'step', 'step_rates', 'fundamental_price',
                     'shared_state_rewarding', 'current_block', 'uid', 'metagraph_data']:
             setattr(self, key, data[key])
@@ -222,51 +233,6 @@ class ReportingService:
         self.request_shm.close_fd()
         self.thread_pool.shutdown(wait=True)
         self.report_executor.shutdown(wait=True)
-
-def init_metrics(self : Validator) -> None:
-    """
-    Set up prometheus metric objects.
-
-    Args:
-        self (taos.im.neurons.validator.Validator): The intelligent markets simulation validator.
-    Returns:
-        None
-    """
-    prometheus (
-        config = self.config,
-        port = self.config.prometheus.port,
-        level = None
-    )
-    self.prometheus_counters = Counter('counters', 'Counter summaries for the running validator.', ['wallet', 'netuid', 'timestamp', 'counter_name'])
-    self.prometheus_simulation_gauges = Gauge('simulation_gauges', 'Gauge summaries for global simulation metrics.', ['wallet', 'netuid', 'simulation_gauge_name'])
-    self.prometheus_validator_gauges = Gauge('validator_gauges', 'Gauge summaries for validator-related metrics.', ['wallet', 'netuid', 'validator_gauge_name'])
-    self.prometheus_miner_gauges = Gauge('miner_gauges', 'Gauge summaries for miner-related metrics.', ['wallet', 'netuid', 'agent_id', 'miner_gauge_name'])
-    self.prometheus_book_gauges = Gauge('book_gauges', 'Gauge summaries for book-related metrics.', ['wallet', 'netuid', 'book_id', 'level', 'book_gauge_name'])
-    self.prometheus_agent_gauges = Gauge('agent_gauges', 'Gauge summaries for agent-related metrics.', ['wallet', 'netuid', 'book_id', 'agent_id', 'agent_gauge_name'])
-
-    self.prometheus_trades = Gauge('trades', 'Gauge summaries for trade metrics.', [
-        'wallet', 'netuid', 'timestamp', 'timestamp_str', 'book_id', 'agent_id', 'trade_id',
-        'aggressing_order_id', 'aggressing_agent_id', 'resting_order_id', 'resting_agent_id',
-        'maker_fee', 'taker_fee',
-        'price', 'volume', 'side', 'trade_gauge_name'])
-    self.prometheus_miner_trades = Gauge('miner_trades', 'Gauge summaries for agent trade metrics.', [
-        'wallet', 'netuid', 'timestamp', 'timestamp_str', 'book_id', 'uid',
-        'role', 'price', 'volume', 'side', 'fee',
-        'miner_trade_gauge_name'])
-    self.prometheus_books = Gauge('books', 'Gauge summaries for book snapshot metrics.', [
-        'wallet', 'netuid', 'timestamp', 'timestamp_str', 'book_id',
-        'bid_5', 'bid_vol_5', 'bid_4', 'bid_vol_4', 'bid_3', 'bid_vol_3', 'bid_2', 'bid_vol_2', 'bid_1', 'bid_vol_1',
-        'ask_5', 'ask_vol_5', 'ask_4', 'ask_vol_4', 'ask_3', 'ask_vol_3', 'ask_2', 'ask_vol_2', 'ask_1', 'ask_vol_1',
-        'book_gauge_name'
-    ])
-    self.prometheus_miners = Gauge('miners', 'Gauge summaries for miner metrics.', [
-        'wallet', 'netuid', 'timestamp', 'timestamp_str', 'agent_id',
-        'placement', 'base_balance', 'base_loan', 'base_collateral', 'quote_balance', 'quote_loan', 'quote_collateral',
-        'inventory_value', 'inventory_value_change', 'pnl', 'pnl_change',
-        'min_daily_volume','activity_factor', 'sharpe', 'sharpe_penalty', 'sharpe_score', 'unnormalized_score', 'score',
-        'miner_gauge_name'
-    ])
-    self.prometheus_info = Info('neuron_info', "Info summaries for the running validator.", ['wallet', 'netuid'])
 
 def publish_validator_gauges(self: ReportingService):
     """
@@ -382,25 +348,37 @@ def report_worker(validator_data: Dict, state_data: Dict) -> Dict:
         maker_volume_sums = validator_data['maker_volume_sums']
         taker_volume_sums = validator_data['taker_volume_sums']
         self_volume_sums = validator_data['self_volume_sums']
+        roundtrip_volume_sums = validator_data['roundtrip_volume_sums']
         volume_decimals = validator_data['simulation_config']['volumeDecimals']
 
         daily_volumes = {}
         for agentId in accounts.keys():
             daily_volumes[agentId] = {}
             for bookId in range(validator_data['book_count']):
-                total_vol = volume_sums.get((agentId, bookId), 0.0)
-                total_maker_vol = maker_volume_sums.get((agentId, bookId), 0.0)
-                total_taker_vol = taker_volume_sums.get((agentId, bookId), 0.0)
-                total_self_vol = self_volume_sums.get((agentId, bookId), 0.0)
+                total_vol = volume_sums.get(agentId, {}).get(bookId, 0.0)
+                total_maker_vol = maker_volume_sums.get(agentId, {}).get(bookId, 0.0)
+                total_taker_vol = taker_volume_sums.get(agentId, {}).get(bookId, 0.0)
+                total_self_vol = self_volume_sums.get(agentId, {}).get(bookId, 0.0)
                 daily_volumes[agentId][bookId] = {
                     'total': total_vol,
                     'maker': total_maker_vol,
                     'taker': total_taker_vol,
                     'self': total_self_vol,
                 }
+
+        daily_roundtrip_volumes = {}
+        for agentId in accounts.keys():
+            daily_roundtrip_volumes[agentId] = {}
+            for bookId in range(validator_data['book_count']):
+                roundtrip_vol = roundtrip_volume_sums.get(agentId, {}).get(bookId, 0.0)
+                daily_roundtrip_volumes[agentId][bookId] = roundtrip_vol
+        
         inventory_history = validator_data['inventory_history']
         total_inventory_history = {}
         pnl = {}
+            
+        realized_pnl_history = validator_data['realized_pnl_history']
+        total_realized_pnl = {}
 
         for agentId in accounts.keys():
             if agentId < 0 or len(inventory_history[agentId]) < 3:
@@ -410,6 +388,13 @@ def report_worker(validator_data: Dict, state_data: Dict) -> Dict:
                 for inventory_value in list(inventory_history[agentId].values())
             ]
             pnl[agentId] = total_inventory_history[agentId][-1] - total_inventory_history[agentId][0]
+            if agentId in realized_pnl_history and realized_pnl_history[agentId]:
+                total_realized_pnl[agentId] = sum(
+                    sum(book_pnl.values()) 
+                    for book_pnl in realized_pnl_history[agentId].values()
+                )
+            else:
+                total_realized_pnl[agentId] = 0.0
 
         scores = torch.FloatTensor(list(validator_data['scores'].values()))
         indices = scores.argsort(dim=-1, descending=True)
@@ -471,9 +456,24 @@ def report_worker(validator_data: Dict, state_data: Dict) -> Dict:
                 for role in ['total', 'maker', 'taker', 'self']
             }
 
+            total_roundtrip_volume = round(
+                sum(daily_roundtrip_volumes[agentId].values()),
+                volume_decimals
+            )
+            average_roundtrip_volume = round(
+                total_roundtrip_volume / len(daily_roundtrip_volumes[agentId]),
+                volume_decimals
+            )
+            min_roundtrip_volume = min(daily_roundtrip_volumes[agentId].values()) if daily_roundtrip_volumes[agentId] else 0.0
+
             activity_factor = (
                 sum(validator_data['activity_factors'][agentId].values()) /
                 len(validator_data['activity_factors'][agentId])
+            )
+
+            activity_factor_realized = (
+                sum(validator_data['activity_factors_realized'][agentId].values()) /
+                len(validator_data['activity_factors_realized'][agentId])
             )
 
             sharpe_values = validator_data['sharpe_values'][agentId] if agentId in validator_data['sharpe_values'] else None
@@ -495,14 +495,24 @@ def report_worker(validator_data: Dict, state_data: Dict) -> Dict:
                     pnl[agentId] - (total_inventory_history[agentId][-2] - total_inventory_history[agentId][0])
                     if len(total_inventory_history[agentId]) > 1 else 0.0
                 ),
+                'total_realized_pnl': total_realized_pnl[agentId],
                 'total_daily_volume': total_daily_volume,
                 'average_daily_volume': average_daily_volume,
                 'min_daily_volume': min_daily_volume,
+                'total_roundtrip_volume': total_roundtrip_volume,
+                'average_roundtrip_volume': average_roundtrip_volume,
+                'min_roundtrip_volume': min_roundtrip_volume,
                 'activity_factor': activity_factor,
+                'activity_factor_realized': activity_factor_realized,
                 'sharpe': sharpe_values['median'] if sharpe_values else None,
                 'sharpe_penalty': sharpe_values.get('penalty') if sharpe_values else None,
-                'sharpe_score': sharpe_values.get('score') if sharpe_values else None,
                 'activity_weighted_normalized_median': sharpe_values.get('activity_weighted_normalized_median') if sharpe_values else None,
+                'sharpe_unrealized_score': sharpe_values.get('score_unrealized') if sharpe_values else None,
+                'sharpe_realized': sharpe_values.get('median_realized') if sharpe_values else None,
+                'sharpe_realized_penalty': sharpe_values.get('penalty_realized') if sharpe_values else None,
+                'activity_weighted_normalized_median_realized': sharpe_values.get('activity_weighted_normalized_median_realized') if sharpe_values else None,
+                'sharpe_realized_score': sharpe_values.get('score_realized') if sharpe_values else None,
+                'sharpe_score': sharpe_values.get('score') if sharpe_values else None,
                 'unnormalized_score': validator_data['unnormalized_scores'][agentId],
                 'score': scores[agentId].item(),
                 'placement': placements[agentId].item(),
@@ -511,6 +521,7 @@ def report_worker(validator_data: Dict, state_data: Dict) -> Dict:
         result['metrics'] = {
             'miner_metrics': miner_metrics,
             'daily_volumes': daily_volumes,
+            'daily_roundtrip_volumes': daily_roundtrip_volumes,
             'total_inventory_history': total_inventory_history,
             'pnl': pnl,
             'scores': scores.tolist(),
@@ -686,10 +697,10 @@ async def report(self: ReportingService) -> None:
             
         bt.logging.debug(f"Computing miner metrics in worker process...")
         computation_start = time.time()
-        volume_sums_snapshot = dict(self.volume_sums)
-        maker_volume_sums_snapshot = dict(self.maker_volume_sums)
-        taker_volume_sums_snapshot = dict(self.taker_volume_sums)
-        self_volume_sums_snapshot = dict(self.self_volume_sums)
+        volume_sums_snapshot = {uid: dict(books) for uid, books in self.volume_sums.items()}
+        maker_volume_sums_snapshot = {uid: dict(books) for uid, books in self.maker_volume_sums.items()}
+        taker_volume_sums_snapshot = {uid: dict(books) for uid, books in self.taker_volume_sums.items()}
+        self_volume_sums_snapshot = {uid: dict(books) for uid, books in self.self_volume_sums.items()}
     
         validator_data = {
             'simulation_timestamp': self.simulation_timestamp,
@@ -698,8 +709,11 @@ async def report(self: ReportingService) -> None:
             'maker_volume_sums': maker_volume_sums_snapshot,
             'taker_volume_sums': taker_volume_sums_snapshot,
             'self_volume_sums': self_volume_sums_snapshot,
+            'roundtrip_volume_sums': {uid: dict(books) for uid, books in self.roundtrip_volume_sums.items()},
             'inventory_history': self.inventory_history,
+            'realized_pnl_history': self.realized_pnl_history,
             'activity_factors': self.activity_factors,
+            'activity_factors_realized': self.activity_factors_realized,
             'sharpe_values': self.sharpe_values,
             'unnormalized_scores': self.unnormalized_scores,
             'scores': self.scores,
@@ -731,6 +745,7 @@ async def report(self: ReportingService) -> None:
         metrics = result['metrics']
         miner_metrics = metrics['miner_metrics']
         daily_volumes = metrics['daily_volumes']
+        daily_roundtrip_volumes = metrics['daily_roundtrip_volumes']
 
         bt.logging.debug(f"Collecting agent book metrics...")
         start = time.time()
@@ -788,20 +803,44 @@ async def report(self: ReportingService) -> None:
                 updates.append((agent_gauges, account['f']['t'], wallet_addr, netuid, bookId, agentId, "fees_taker_rate"))
                 updates.append((agent_gauges, last_inv[bookId], wallet_addr, netuid, bookId, agentId, "inventory_value"))
                 updates.append((agent_gauges, last_inv[bookId] - start_inv[bookId], wallet_addr, netuid, bookId, agentId, "pnl"))
+                if agentId in self.realized_pnl_history and self.realized_pnl_history[agentId]:
+                    book_realized_pnl = sum(
+                        pnl_dict.get(bookId, 0.0) 
+                        for pnl_dict in self.realized_pnl_history[agentId].values()
+                    )
+                    updates.append((agent_gauges, book_realized_pnl, wallet_addr, netuid, bookId, agentId, "realized_pnl"))
+                else:
+                    updates.append((agent_gauges, 0.0, wallet_addr, netuid, bookId, agentId, "realized_pnl"))
                 updates.append((agent_gauges, daily_volumes[agentId][bookId]['total'], wallet_addr, netuid, bookId, agentId, "daily_volume"))
                 updates.append((agent_gauges, daily_volumes[agentId][bookId]['maker'], wallet_addr, netuid, bookId, agentId, "daily_maker_volume"))
                 updates.append((agent_gauges, daily_volumes[agentId][bookId]['taker'], wallet_addr, netuid, bookId, agentId, "daily_taker_volume"))
                 updates.append((agent_gauges, daily_volumes[agentId][bookId]['self'], wallet_addr, netuid, bookId, agentId, "daily_self_volume"))
+                updates.append((agent_gauges, daily_roundtrip_volumes[agentId][bookId], wallet_addr, netuid, bookId, agentId, "daily_roundtrip_volume"))
                 updates.append((agent_gauges, self.activity_factors[agentId][bookId], wallet_addr, netuid, bookId, agentId, "activity_factor"))
+                updates.append((agent_gauges, self.activity_factors_realized[agentId][bookId], wallet_addr, netuid, bookId, agentId, "activity_factor_realized"))
                 if sharpes:
                     updates.append((agent_gauges, sharpes['books'][bookId], wallet_addr, netuid, bookId, agentId, "sharpe"))
                     if 'books_weighted' in sharpes:
                         updates.append((agent_gauges, sharpes['books_weighted'][bookId], wallet_addr, netuid, bookId, agentId, "weighted_sharpe"))
+                    if sharpes['books_realized'][bookId] is not None:
+                        updates.append((agent_gauges, sharpes['books_realized'][bookId], wallet_addr, netuid, bookId, agentId, "sharpe_realized"))
+                    else:
+                        try:
+                            agent_gauges.remove(wallet_addr, netuid, bookId, agentId, "sharpe_realized")
+                        except KeyError:
+                            pass
+                    if 'books_weighted_realized' in sharpes and sharpes['books_weighted_realized'][bookId] is not None:
+                        updates.append((agent_gauges, sharpes['books_weighted_realized'][bookId], wallet_addr, netuid, bookId, agentId, "weighted_sharpe_realized"))
+                    else:
+                        try:
+                            agent_gauges.remove(wallet_addr, netuid, bookId, agentId, "weighted_sharpe_realized")
+                        except KeyError:
+                            pass
                 else:
                     try:
                         agent_gauges.remove(wallet_addr, netuid, bookId, agentId, "sharpe")
                     except KeyError:
-                        pass                        
+                        pass       
         bt.logging.debug(f"Agent book metrics collected ({time.time()-start:.4f}s).")
 
         bt.logging.debug(f"Collecting miner trade metrics...")
@@ -857,6 +896,7 @@ async def report(self: ReportingService) -> None:
             updates.append((miner_gauges, m['total_quote_collateral'], wallet_addr, netuid, agentId, "total_quote_collateral"))
             updates.append((miner_gauges, m['total_inventory_value'], wallet_addr, netuid, agentId, "total_inventory_value"))
             updates.append((miner_gauges, m['pnl'], wallet_addr, netuid, agentId, "pnl"))
+            updates.append((miner_gauges, m['total_realized_pnl'], wallet_addr, netuid, agentId, "total_realized_pnl"))
 
             updates.append((miner_gauges, m['total_daily_volume']['total'], wallet_addr, netuid, agentId, "total_daily_volume"))
             updates.append((miner_gauges, m['total_daily_volume']['maker'], wallet_addr, netuid, agentId, "total_daily_maker_volume"))
@@ -872,8 +912,13 @@ async def report(self: ReportingService) -> None:
             updates.append((miner_gauges, m['min_daily_volume']['maker'], wallet_addr, netuid, agentId, "min_daily_maker_volume"))
             updates.append((miner_gauges, m['min_daily_volume']['taker'], wallet_addr, netuid, agentId, "min_daily_taker_volume"))
             updates.append((miner_gauges, m['min_daily_volume']['self'], wallet_addr, netuid, agentId, "min_daily_self_volume"))
+            
+            updates.append((miner_gauges, m['total_roundtrip_volume'], wallet_addr, netuid, agentId, "total_roundtrip_volume"))
+            updates.append((miner_gauges, m['average_roundtrip_volume'], wallet_addr, netuid, agentId, "average_roundtrip_volume"))
+            updates.append((miner_gauges, m['min_roundtrip_volume'], wallet_addr, netuid, agentId, "min_roundtrip_volume"))
 
             updates.append((miner_gauges, m['activity_factor'], wallet_addr, netuid, agentId, "activity_factor"))
+            updates.append((miner_gauges, m['activity_factor_realized'], wallet_addr, netuid, agentId, "activity_factor_realized"))
 
             if m['sharpe'] is not None:
                 updates.append((miner_gauges, m['sharpe'], wallet_addr, netuid, agentId, "sharpe"))
@@ -881,13 +926,24 @@ async def report(self: ReportingService) -> None:
                     updates.append((miner_gauges, m['activity_weighted_normalized_median'], wallet_addr, netuid, agentId, "activity_weighted_normalized_median_sharpe"))
                 if m['sharpe_penalty'] is not None:
                     updates.append((miner_gauges, m['sharpe_penalty'], wallet_addr, netuid, agentId, "sharpe_penalty"))
-                if m['sharpe_score'] is not None:
-                    updates.append((miner_gauges, m['sharpe_score'], wallet_addr, netuid, agentId, "sharpe_score"))
+                if m['sharpe_unrealized_score'] is not None:
+                    updates.append((miner_gauges, m['sharpe_unrealized_score'], wallet_addr, netuid, agentId, "sharpe_unrealized_score"))
             else:
                 try:
                     miner_gauges.remove(wallet_addr, netuid, agentId, "sharpe")
                 except KeyError:
                     pass
+            if m['sharpe_realized'] is not None:
+                updates.append((miner_gauges, m['sharpe_realized'], wallet_addr, netuid, agentId, "sharpe_realized"))
+                if m['activity_weighted_normalized_median_realized'] is not None:
+                    updates.append((miner_gauges, m['activity_weighted_normalized_median_realized'], wallet_addr, netuid, agentId, "activity_weighted_normalized_median_sharpe_realized"))
+                if m['sharpe_realized_penalty'] is not None:
+                    updates.append((miner_gauges, m['sharpe_realized_penalty'], wallet_addr, netuid, agentId, "sharpe_penalty_realized"))
+                if m['sharpe_realized_score'] is not None:
+                    updates.append((miner_gauges, m['sharpe_realized_score'], wallet_addr, netuid, agentId, "sharpe_realized_score"))
+            
+            if m['sharpe_score'] is not None:
+                updates.append((miner_gauges, m['sharpe_score'], wallet_addr, netuid, agentId, "sharpe_score"))
 
             updates.append((miner_gauges, m['unnormalized_score'], wallet_addr, netuid, agentId, "unnormalized_score"))
             updates.append((miner_gauges, m['score'], wallet_addr, netuid, agentId, "score"))
@@ -926,10 +982,19 @@ async def report(self: ReportingService) -> None:
                 inventory_value_change=m['inventory_value_change'],
                 pnl=m['pnl'],
                 pnl_change=m['pnl_change'],
+                total_realized_pnl=m['total_realized_pnl'],
+                total_daily_volume=m['total_daily_volume']['total'],
                 min_daily_volume=m['min_daily_volume']['total'],
+                total_roundtrip_volume=m['total_roundtrip_volume'],
+                min_roundtrip_volume=m['min_roundtrip_volume'], 
                 activity_factor=m['activity_factor'],
+                activity_factor_realized=m['activity_factor_realized'],
                 sharpe=m['sharpe'],
                 sharpe_penalty=m['sharpe_penalty'],
+                sharpe_unrealized_score=m['sharpe_unrealized_score'],
+                sharpe_realized=m['sharpe_realized'],
+                sharpe_realized_penalty=m['sharpe_realized_penalty'],
+                sharpe_realized_score=m['sharpe_realized_score'],
                 sharpe_score=m['sharpe_score'],
                 unnormalized_score=m['unnormalized_score'],
                 score=m['score'],
@@ -950,8 +1015,6 @@ async def report(self: ReportingService) -> None:
         self.shared_state_reporting = False
         
 if __name__ == '__main__':
-    import argparse
-    
     parser = argparse.ArgumentParser()
     bt.wallet.add_args(parser)
     bt.subtensor.add_args(parser)
@@ -962,9 +1025,15 @@ if __name__ == '__main__':
     parser.add_argument('--logging.level', type=str, default="info")
     parser.add_argument('--prometheus.port', type=int, default=9001)
     parser.add_argument('--prometheus.level', type=str, default='INFO')
+    parser.add_argument('--cpu-cores', type=str, default=None)
     
     config = bt.config(parser)
     bt.logging(config=config)
+    
+    if config.cpu_cores:
+        cores = [int(c) for c in config.cpu_cores.split(',')]
+        os.sched_setaffinity(0, set(cores))
+        bt.logging.info(f"Reporting service assigned to cores: {cores}")
     
     service = ReportingService(config)
     

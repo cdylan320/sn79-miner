@@ -89,7 +89,7 @@ void printBalances(const taosim::accounting::Balances& balances, const AgentId a
     fmt::println("Agent {} => \tBase: {} \n\t\tQuote: {}", agentId, baseString, quoteString);
     for (auto it = balances.m_loans.begin(); it != balances.m_loans.end(); it++){
         if (it == balances.m_loans.begin())
-            fmt::println("----------------------------");
+            fmt::println("-------------- baseLoan: {}  |  quoteLoan: {} --------------", balances.m_baseLoan, balances.m_quoteLoan);
 
         const auto& loan = it->second;
         fmt::println("Loan id:{}  amount:{}  lev:{}  dir:{}  col:(B:{}|Q:{})  margin:{}", 
@@ -248,8 +248,8 @@ public:
     void fill(){
         placeLimitOrder(exchange, agent4, bookId, Currency::BASE, SettleType::NONE, OrderDirection::BUY, 3_dec, 291_dec, DEC(1.));
         placeLimitOrder(exchange, agent4, bookId, Currency::BASE, SettleType::NONE, OrderDirection::BUY, 1_dec, 297_dec, DEC(1.));
-        placeLimitOrder(exchange, agent4, bookId, Currency::BASE, SettleType::NONE, OrderDirection::SELL, 2_dec, 303_dec, DEC(1.));
-        placeLimitOrder(exchange, agent4, bookId, Currency::BASE, SettleType::NONE, OrderDirection::SELL, 8_dec, 307_dec, DEC(1.));
+        placeLimitOrder(exchange, agent4, bookId, Currency::BASE, SettleType::NONE, OrderDirection::SELL, 2_dec, 303_dec, DEC(0.));
+        placeLimitOrder(exchange, agent4, bookId, Currency::BASE, SettleType::NONE, OrderDirection::SELL, 8_dec, 307_dec, DEC(0.));
     }
 
     void fillOrderBook(std::vector<OrderParams> orders, AgentId agentId)
@@ -322,6 +322,7 @@ TEST_P(LoanSettlementTest, NoneFlag)
     placeMarketOrder(exchange, agent1, bookId, Currency::BASE, SettleType::NONE,
         testOrder.direction, testOrder.volume, testOrder.leverage);
     
+    printOrderbook(book);
     for (AgentId agId = -1; agId > -5; agId--){
         printBalances(exchange->accounts()[agId][bookId], agId);
     }
@@ -404,6 +405,7 @@ TEST_P(LoanSettlementTest, FIFOFlag)
     placeMarketOrder(exchange, agent1, bookId, Currency::BASE, SettleType::FIFO,
         testOrder.direction, testOrder.volume, testOrder.leverage);
     
+    printOrderbook(book);
     for (AgentId agId = -1; agId > -5; agId--){
         printBalances(exchange->accounts()[agId][bookId], agId);
     }

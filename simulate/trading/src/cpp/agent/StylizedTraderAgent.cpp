@@ -304,7 +304,6 @@ void StylizedTraderAgent::configure(const pugi::xml_node& node)
         }());
     }
 
-    m_tradePrice = std::vector<TimestampedTradePrice>(m_bookCount, TimestampedTradePrice{.timestamp=0,.price=m_price0}); 
     attr = node.attribute("opLatencyScaleRay"); 
     const double scale = (attr.empty() || attr.as_double() == 0.0) ? 0.235 : attr.as_double();
     const double percentile = 1-std::exp(-1/(2*scale*scale));
@@ -426,8 +425,8 @@ void StylizedTraderAgent::handleRetrieveL1Response(Message::Ptr msg)
     topLevel.ask = taosim::util::decimal2double(payload->bestAskPrice);
     
 
-    if  (topLevel.bid == 0.0) topLevel.bid = m_tradePrice.at(bookId).price;
-    if  (topLevel.ask == 0.0) topLevel.ask = m_tradePrice.at(bookId).price;
+    if  (topLevel.bid == 0.0) topLevel.bid =  m_priceHist.at(bookId).back();
+    if  (topLevel.ask == 0.0) topLevel.ask = topLevel.bid + m_priceIncrement;
     const double midQuote = 0.5 * (topLevel.bid + topLevel.ask);
     const double spotPrice = midQuote;
     const double lastPrice = midQuote;
@@ -482,11 +481,6 @@ void StylizedTraderAgent::handleCancelOrdersErrorResponse(Message::Ptr msg)
 void StylizedTraderAgent::handleTrade(Message::Ptr msg)
 {
     const auto payload = std::dynamic_pointer_cast<EventTradePayload>(msg->payload);
-    const double tradePrice = taosim::util::decimal2double(payload->trade.price());
-    m_tradePrice.at(payload->bookId) = {
-        .timestamp = msg->arrival,
-        .price = tradePrice
-    };
 }
 
 //-------------------------------------------------------------------------
@@ -497,7 +491,8 @@ StylizedTraderAgent::ForecastResult StylizedTraderAgent::forecast(BookId bookId)
 
     m_price = m_priceHist.at(bookId).back();
     if (isnan(m_price) || m_price <= 0.0) {
-        m_price = m_tradePrice.at(bookId).price;
+        // Error recovery
+        m_price = m_price0;
     }
     const auto& logReturns = m_logReturns.at(bookId);
     double compF =  1.0 / m_tauF.at(bookId) * std::log(pf/ m_price);

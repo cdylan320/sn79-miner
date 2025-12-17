@@ -33,12 +33,6 @@ private:
     {
         Timestamp min, max;
     };
-
-    struct TimestampedTradePrice
-    {
-        Timestamp timestamp{};
-        double price{};
-    };
     
     struct OptimizationResult
     {
@@ -116,7 +110,6 @@ private:
     DelayBounds m_opl;
     std::vector<bool> m_orderFlag;
     std::normal_distribution<double> m_marketFeedLatencyDistribution;
-    std::vector<TimestampedTradePrice> m_tradePrice;
     std::unique_ptr<stats::Distribution> m_orderPlacementLatencyDistribution;
     std::unique_ptr<stats::Distribution> m_priceShiftDistribution;
 

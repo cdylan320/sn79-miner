@@ -159,7 +159,6 @@ void NoiseTraderAgent::configure(const pugi::xml_node& node)
     
     m_orderFlag = std::vector<bool>(m_bookCount, false);
 
-    m_tradePrice.resize(m_bookCount);
  
     size_t pos = name().find_last_not_of("0123456789");
     if (pos != std::string::npos && pos + 1 < name().size()) {
@@ -211,23 +210,6 @@ void NoiseTraderAgent::receiveMessage(Message::Ptr msg)
 
 void NoiseTraderAgent::handleSimulationStart()
 {
-    simulation()->dispatchMessage(
-        simulation()->currentTimestamp(),
-        1,
-        name(),
-        m_exchange,
-        "SUBSCRIBE_EVENT_TRADE");
-}
-
-//-------------------------------------------------------------------------
-
-void NoiseTraderAgent::handleSimulationStop()
-{}
-
-//-------------------------------------------------------------------------
-
-void NoiseTraderAgent::handleTradeSubscriptionResponse()
-{
     if (m_catUId == 0) {
         for (BookId bookId = 0; bookId < m_bookCount; ++bookId) {
 
@@ -245,6 +227,18 @@ void NoiseTraderAgent::handleTradeSubscriptionResponse()
             field->insertDurationComp(m_baseName, DurationComp{.delay=initValue, .psi=initValue});
         }
     }
+}
+
+//-------------------------------------------------------------------------
+
+void NoiseTraderAgent::handleSimulationStop()
+{}
+
+//-------------------------------------------------------------------------
+
+void NoiseTraderAgent::handleTradeSubscriptionResponse()
+{
+
 }
 
 //------------------------------------------------------------------------
@@ -302,8 +296,8 @@ void NoiseTraderAgent::handleRetrieveL1Response(Message::Ptr msg)
 
     double bestBid = taosim::util::decimal2double(payload->bestBidPrice);
     double bestAsk = taosim::util::decimal2double(payload->bestAskPrice);    
-    if  (bestBid == 0.0) bestBid = m_tradePrice.at(bookId).price;
-    if  (bestAsk == 0.0) bestAsk = m_tradePrice.at(bookId).price;
+    if  (bestBid == 0.0) bestBid = m_price; 
+    if  (bestAsk == 0.0) bestAsk = bestBid + m_priceIncrement; 
     const double midQuote = 0.5*(bestAsk + bestBid);
     m_price = midQuote;
     placeOrder(bookId);
@@ -374,11 +368,7 @@ void NoiseTraderAgent::handleCancelOrdersErrorResponse(Message::Ptr msg)
 void NoiseTraderAgent::handleTrade(Message::Ptr msg)
 {
     const auto payload = std::dynamic_pointer_cast<EventTradePayload>(msg->payload);
-    const double tradePrice = taosim::util::decimal2double(payload->trade.price());
-    m_tradePrice.at(payload->bookId) = {
-        .timestamp = msg->arrival,
-        .price = tradePrice
-    };
+
 }
 
 

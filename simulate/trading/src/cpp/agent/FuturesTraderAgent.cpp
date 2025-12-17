@@ -138,7 +138,6 @@ void FuturesTraderAgent::configure(const pugi::xml_node& node)
         }()
     };
 
-    m_tradePrice.resize(m_bookCount);
     
     attr = node.attribute("opLatencyScaleRay"); 
     const double scale = (attr.empty() || attr.as_double() == 0.0) ? 0.235 : attr.as_double();
@@ -198,12 +197,20 @@ void FuturesTraderAgent::receiveMessage(Message::Ptr msg)
 
 void FuturesTraderAgent::handleSimulationStart()
 {
-    simulation()->dispatchMessage(
-        simulation()->currentTimestamp(),
-        1,
-        name(),
-        m_exchange,
-        "SUBSCRIBE_EVENT_TRADE");
+    if (m_catUId == 0) {
+        for (BookId bookId = 0; bookId < m_bookCount; ++bookId) {
+
+            auto chosenAgent = selectTurn();
+
+            simulation()->dispatchMessage(
+                simulation()->currentTimestamp(),
+                decisionMakingDelay(),
+                name(),
+                fmt::format("{}_{}", m_baseName, chosenAgent),
+                "WAKEUP",
+                MessagePayload::create<RetrieveL1Payload>(bookId));
+        }
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -215,20 +222,7 @@ void FuturesTraderAgent::handleSimulationStop()
 
 void FuturesTraderAgent::handleTradeSubscriptionResponse()
 {
-    if (m_catUId == 0) {
-        for (BookId bookId = 0; bookId < m_bookCount; ++bookId) {
 
-            auto chosenAgent = selectTurn();
-
-            simulation()->dispatchMessage(
-                simulation()->currentTimestamp(),
-                marketFeedLatency(),
-                name(),
-                fmt::format("{}_{}", m_baseName, chosenAgent),
-                "WAKEUP",
-                MessagePayload::create<RetrieveL1Payload>(bookId));
-        }
-    }
 }
 
 //-------------------------------------------------------------------------
@@ -262,7 +256,7 @@ void FuturesTraderAgent::handleRetrieveL1Response(Message::Ptr msg)
     uint64_t chosenOne = selectTurn();
     simulation()->dispatchMessage(
         simulation()->currentTimestamp(),
-        marketFeedLatency(),
+        decisionMakingDelay(),
         name(),
         fmt::format("{}_{}", m_baseName, chosenOne),
         "WAKEUP",
@@ -342,11 +336,6 @@ void FuturesTraderAgent::handleCancelOrdersErrorResponse(Message::Ptr msg)
 void FuturesTraderAgent::handleTrade(Message::Ptr msg)
 {
     const auto payload = std::dynamic_pointer_cast<EventTradePayload>(msg->payload);
-    const double tradePrice = taosim::util::decimal2double(payload->trade.price());
-    m_tradePrice.at(payload->bookId) = {
-        .timestamp = msg->arrival,
-        .price = tradePrice
-    };
 }
 
 

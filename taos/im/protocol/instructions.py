@@ -212,7 +212,7 @@ class ClosePositionsInstruction(FinanceAgentInstruction):
 
     def payload(self) -> dict:
         return {
-            "closePositions": [close_position.serialize() for close_position in self.closes],
+            "closes": [close_position.serialize() for close_position in self.closes],
             "bookId": self.bookId
         }
     
