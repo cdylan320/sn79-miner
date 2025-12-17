@@ -4,7 +4,8 @@ import numpy as np
 from collections.abc import Mapping, Sequence
 from xml.etree.ElementTree import Element
 from pydantic import Field
-from ypyjson import YpyObject
+# from ypyjson import YpyObject  # Disabled due to gcc compilation issues
+from ypyjson_mock import YpyObject
 from enum import IntEnum
 from itertools import accumulate
 from typing import Literal, Any

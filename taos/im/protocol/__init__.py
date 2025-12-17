@@ -3,7 +3,8 @@
 import time
 import traceback
 import bittensor as bt
-from ypyjson import YpyObject
+# from ypyjson import YpyObject  # Disabled due to gcc compilation issues
+from ypyjson_mock import YpyObject
 from typing import Annotated, Optional, ClassVar, Literal
 from taos.im.protocol.simulator import *
 from taos.im.protocol.models import *

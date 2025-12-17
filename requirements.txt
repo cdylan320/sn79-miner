@@ -15,7 +15,7 @@ lz4
 uvloop
 aiohttp>=3.11.18
 loky>=3.5.5
-ypyjson>=0.0.2
+# ypyjson>=0.0.2  # Temporarily disabled - requires gcc which is not available in container
 scikit-learn
 posix-ipc
 zstandard

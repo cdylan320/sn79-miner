@@ -37,10 +37,21 @@ echo "AGENT_PARAMS: ${AGENT_PARAMS[@]}"
 # Update code
 git pull
 
-# Use btcli virtual environment instead of local pip install
+# Set up environment variables
 export HOME="/home/ocean"
 export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
-source /home/ocean/btcli-latest/bin/activate
+export PYTHONPATH="/home/ocean/.local/lib/python3.11/site-packages:/home/ocean/Draven/sn79-miner:$PYTHONPATH"
+
+# Create wallet directory if it doesn't exist
+mkdir -p "$BT_WALLET_PATH"
+
+# Try to activate btcli virtual environment if it exists
+if [ -f "/home/ocean/btcli-latest/bin/activate" ]; then
+    source /home/ocean/btcli-latest/bin/activate
+    echo "Activated btcli virtual environment"
+else
+    echo "btcli virtual environment not found, continuing with current environment"
+fi
 
 # Install/update taos package in the btcli environment
 pip install -e . --quiet
