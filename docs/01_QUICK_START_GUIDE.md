@@ -70,7 +70,7 @@ btcli subnet register --netuid 79 --subtensor.network finney --wallet.name taos 
 ### Testnet
 
 ```bash
-./run_miner.sh -e test -w taos -h miner -u 366
+./run_miner.sh -e test -u 366
 ```
 
 ### Mainnet
