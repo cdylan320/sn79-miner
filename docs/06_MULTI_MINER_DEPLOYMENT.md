@@ -86,28 +86,28 @@ Network: 200 Mbps
 
 ```bash
 # Create wallet with multiple hotkeys
-btcli wallet create --wallet.name taos --wallet.hotkey miner1
-btcli wallet create --wallet.name taos --wallet.hotkey miner2
-btcli wallet create --wallet.name taos --wallet.hotkey miner3
+btcli w create --wallet-name taos --wallet-hotkey miner1
+btcli w create --wallet-name taos --wallet-hotkey miner2
+btcli w create --wallet-name taos --wallet-hotkey miner3
 
 # Or use different coldkeys
-btcli wallet create --wallet.name taos1 --wallet.hotkey miner
-btcli wallet create --wallet.name taos2 --wallet.hotkey miner
-btcli wallet create --wallet.name taos3 --wallet.hotkey miner
+btcli w create --wallet-name taos1 --wallet-hotkey miner
+btcli w create --wallet-name taos2 --wallet-hotkey miner
+btcli w create --wallet-name taos3 --wallet-hotkey miner
 ```
 
 ### Step 2: Register Each Hotkey
 
 ```bash
 # Testnet
-btcli subnet register --netuid 366 --subtensor.network test --wallet.name taos --wallet.hotkey miner1
-btcli subnet register --netuid 366 --subtensor.network test --wallet.name taos --wallet.hotkey miner2
-btcli subnet register --netuid 366 --subtensor.network test --wallet.name taos --wallet.hotkey miner3
+btcli s register --netuid 366 --network test --wallet-name taos --wallet-hotkey miner1
+btcli s register --netuid 366 --network test --wallet-name taos --wallet-hotkey miner2
+btcli s register --netuid 366 --network test --wallet-name taos --wallet-hotkey miner3
 
 # Mainnet (costs TAO each)
-btcli subnet register --netuid 79 --subtensor.network finney --wallet.name taos --wallet.hotkey miner1
-btcli subnet register --netuid 79 --subtensor.network finney --wallet.name taos --wallet.hotkey miner2
-btcli subnet register --netuid 79 --subtensor.network finney --wallet.name taos --wallet.hotkey miner3
+btcli s register --netuid 79 --network finney --wallet-name taos --wallet-hotkey miner1
+btcli s register --netuid 79 --network finney --wallet-name taos --wallet-hotkey miner2
+btcli s register --netuid 79 --network finney --wallet-name taos --wallet-hotkey miner3
 ```
 
 ### Step 3: Create Launch Scripts

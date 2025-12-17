@@ -36,12 +36,13 @@ export MKL_NUM_THREADS="${MKL_NUM_THREADS:-1}"
 export BT_LOGGING="${BT_LOGGING:-DEBUG}"
 export BT_PROGRESS="${BT_PROGRESS:-1}"
 
-# Use btcli v9.16.0 with TAO payment (not POW)
+# Use btcli from project's virtual environment
 export HOME="/home/ocean"
 export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
 
-# Activate the btcli virtual environment
-source /home/ocean/btcli-latest/bin/activate
+# Activate the project's virtual environment (contains btcli)
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/venv/bin/activate"
 
 # For btcli v9.16.0, use proper commands
 if [[ "$1" == "--version" || "$1" == "-v" ]]; then

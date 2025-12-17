@@ -45,7 +45,7 @@ cd sn-79
 ### Create Wallet (if needed)
 
 ```bash
-btcli wallet create --wallet.name taos --wallet.hotkey miner
+btcli w create --wallet-name taos --wallet-hotkey miner
 ```
 
 ### Register on Testnet First
@@ -55,14 +55,14 @@ btcli wallet create --wallet.name taos --wallet.hotkey miner
 # https://discord.com/channels/799672011265015819/1389370202327748629
 
 # Register on testnet (netuid 366)
-btcli subnet register --netuid 366 --subtensor.network test --wallet.name taos --wallet.hotkey miner
+btcli s register --netuid 366 --network test --wallet-name taos --wallet-hotkey miner
 ```
 
 ### Register on Mainnet
 
 ```bash
 # Register on mainnet (netuid 79) - costs TAO
-btcli subnet register --netuid 79 --subtensor.network finney --wallet.name taos --wallet.hotkey miner
+btcli s register --netuid 79 --network finney --wallet-name taos --wallet-hotkey miner
 ```
 
 ## Run Your Miner
@@ -77,6 +77,28 @@ btcli subnet register --netuid 79 --subtensor.network finney --wallet.name taos 
 
 ```bash
 ./run_miner.sh -e finney -w taos -h miner -u 79
+```
+
+## Check Wallet & Miner Status
+
+### Wallet Balance
+```bash
+./btcli wallet balance --wallet-name taos --network test
+./btcli wallet balance --wallet-name taos --network finney
+```
+
+### Miner Registration Status
+```bash
+# Check specific miner
+./btcli wallet overview --wallet-name taos --wallet-hotkey miner --netuid 366 --network test
+
+# Check all wallets on subnet
+./btcli wallet overview --all --netuid 366 --network test
+```
+
+### Wallet List
+```bash
+./btcli wallet list
 ```
 
 ## Monitor Performance

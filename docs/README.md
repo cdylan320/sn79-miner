@@ -156,7 +156,7 @@ Based on simulated testing:
 **Commands**:
 ```bash
 # Register
-btcli subnet register --netuid 366 --subtensor.network test --wallet.name taos --wallet.hotkey miner
+btcli s register --netuid 366 --network test --wallet-name taos --wallet-hotkey miner
 
 # Deploy
 ./run_miner.sh -e test -u 366 -n OptimizedMarketMaker
@@ -205,10 +205,10 @@ pm2 logs miner
 **Commands**:
 ```bash
 # Create second hotkey
-btcli wallet create --wallet.name taos --wallet.hotkey miner2
+btcli w create --wallet-name taos --wallet-hotkey miner2
 
 # Register second miner
-btcli subnet register --netuid 366 --subtensor.network test --wallet.name taos --wallet.hotkey miner2
+btcli s register --netuid 366 --network test --wallet-name taos --wallet-hotkey miner2
 
 # Deploy second strategy
 cd taos/im/neurons
@@ -230,7 +230,7 @@ pm2 start --name=miner2 "python miner.py --netuid 366 --subtensor.network test -
 **Commands**:
 ```bash
 # Register mainnet
-btcli subnet register --netuid 79 --subtensor.network finney --wallet.name taos --wallet.hotkey miner
+btcli s register --netuid 79 --network finney --wallet-name taos --wallet-hotkey miner
 
 # Deploy to mainnet
 ./run_miner.sh -e finney -u 79 -n OptimizedMarketMaker -m "base_quantity=1.0 min_spread=0.0005"
@@ -377,7 +377,7 @@ btcli subnet register --netuid 366 --subtensor.network test
 ./run_miner.sh -e test -u 366 -n OptimizedMarketMaker
 
 # Register mainnet
-btcli subnet register --netuid 79 --subtensor.network finney
+btcli s register --netuid 79 --network finney --wallet-name taos --wallet-hotkey miner
 
 # Deploy mainnet
 ./run_miner.sh -e finney -u 79 -n OptimizedMarketMaker
