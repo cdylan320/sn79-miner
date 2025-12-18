@@ -311,13 +311,13 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{
             .initOrders = {
                 OrderParams{.direction = OrderDirection::SELL, .price = DEC(301.0), .volume = DEC(6.2), .leverage = DEC(0.)},
-                OrderParams{.direction = OrderDirection::BUY, .price = DEC(299.5), .volume = DEC(3.5), .leverage = DEC(0.)}},
+                OrderParams{.direction = OrderDirection::BUY, .price = DEC(299.5), .volume = DEC(4.2), .leverage = DEC(0.)}},
             .testOrder = OrderParams{.direction = OrderDirection::SELL, .price = DEC(299.5), .volume = DEC(1.2), .leverage = DEC(0.)}
         },
         TestParams{
             .initOrders = {
                 OrderParams{.direction = OrderDirection::SELL, .price = DEC(301.0), .volume = DEC(6.2), .leverage = DEC(0.3)},
-                OrderParams{.direction = OrderDirection::BUY, .price = DEC(299.), .volume = DEC(3.5), .leverage = DEC(0.2)}},
+                OrderParams{.direction = OrderDirection::BUY, .price = DEC(299.), .volume = DEC(3.5), .leverage = DEC(0.)}},
             .testOrder = OrderParams{.direction = OrderDirection::SELL, .price = DEC(299.0), .volume = DEC(1.2), .leverage = DEC(0.49)}
         },
         TestParams{
@@ -329,7 +329,7 @@ INSTANTIATE_TEST_SUITE_P(
         TestParams{
             .initOrders = {
                 OrderParams{.direction = OrderDirection::SELL, .price = DEC(301.0), .volume = DEC(10.2), .leverage = DEC(0.3)},
-                OrderParams{.direction = OrderDirection::BUY, .price = DEC(299.1), .volume = DEC(3.5), .leverage = DEC(0.2)}},
+                OrderParams{.direction = OrderDirection::BUY, .price = DEC(299.1), .volume = DEC(4.2), .leverage = DEC(0.)}},
             .testOrder = OrderParams{.direction = OrderDirection::BUY, .price = DEC(301.0), .volume = DEC(1.2), .leverage = DEC(0.5)}
         },
         TestParams{

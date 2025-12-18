@@ -24,9 +24,9 @@ import uvloop
 import asyncio
 import aiohttp
 import posix_ipc
-import msgpack
 import struct
 import traceback
+import pickle
 from typing import List
 
 from taos.im.neurons.validator import Validator
@@ -156,7 +156,7 @@ async def forward(self, synapse: MarketSimulationStateUpdate) -> List[FinanceAge
         'miner_wealth': self.simulation.miner_wealth,
         'volume_decimals': self.simulation.volumeDecimals,
         'book_count': self.simulation.book_count,
-        'volume_sums': {f"{uid},{book_id}": vol for (uid, book_id), vol in self.volume_sums.items()},
+        'volume_sums': {uid: dict(books) for uid, books in self.volume_sums.items()},
         'capital_turnover_cap': self.config.scoring.activity.capital_turnover_cap,
         'max_instructions_per_book': self.config.scoring.max_instructions_per_book,
     }
@@ -164,33 +164,41 @@ async def forward(self, synapse: MarketSimulationStateUpdate) -> List[FinanceAge
 
     query_start = time.time()
     try:
-        while True:
-            try:
-                self.response_queue.receive(timeout=0.001)
-                bt.logging.warning("Drained stale message from response queue")
-            except posix_ipc.BusyError:
-                break
-        bt.logging.info(f"Drained Queue ({time.time()-query_start:.4f}s).")
+        try:
+            await asyncio.to_thread(self.response_queue.receive, timeout=0.0)
+            bt.logging.warning("Drained stale message from query response queue")
+        except posix_ipc.BusyError:
+            pass
+        bt.logging.info(f"Drained Query Response Queue ({time.time()-query_start:.4f}s).")
 
         write_start = time.time()
-        data_bytes = msgpack.packb(request_data)
+        data_bytes = await asyncio.to_thread(pickle.dumps, request_data, protocol=5)
         bt.logging.info(f"Request data size: {len(data_bytes) / 1024 / 1024:.2f} MB")
-        self.request_mem.seek(0)
-        self.request_mem.write(struct.pack('Q', len(data_bytes)))
-        self.request_mem.write(data_bytes)
+        
+        def write_request():
+            self.request_mem.seek(0)
+            self.request_mem.write(struct.pack('Q', len(data_bytes)))
+            self.request_mem.write(data_bytes)
+        
+        await asyncio.to_thread(write_request)
         bt.logging.info(f"Wrote request data ({time.time()-write_start:.4f}s).")
 
         receive_start = time.time()
-        self.request_queue.send(b'query')
+        await asyncio.to_thread(self.request_queue.send, b'query')
         timeout = self.config.neuron.global_query_timeout + 10
-        message, _ = self.response_queue.receive(timeout=timeout)
+        message, _ = await asyncio.to_thread(self.response_queue.receive, timeout=timeout)
         bt.logging.info(f"Received Response ({time.time()-receive_start:.4f}s).")
 
         read_start = time.time()
-        self.response_mem.seek(0)
-        size_bytes = self.response_mem.read(8)
-        data_size = struct.unpack('Q', size_bytes)[0]
-        result = msgpack.unpackb(self.response_mem.read(data_size), raw=False, strict_map_key=False)
+        
+        def read_response():
+            self.response_mem.seek(0)
+            size_bytes = self.response_mem.read(8)
+            data_size = struct.unpack('Q', size_bytes)[0]
+            result_bytes = self.response_mem.read(data_size)
+            return pickle.loads(result_bytes)
+        
+        result = await asyncio.to_thread(read_response)
         bt.logging.info(f"Read response data ({time.time()-read_start:.4f}s).")
 
     except posix_ipc.BusyError:
@@ -207,16 +215,7 @@ async def forward(self, synapse: MarketSimulationStateUpdate) -> List[FinanceAge
             bt.logging.error(f"Traceback: {result['traceback']}")
         return responses
 
-    reconstruct_start = time.time()
-    synapse_responses = {}
-    for uid_str, response_data in result['responses'].items():
-        uid = int(uid_str)
-        if response_data['response']:
-            try:
-                synapse_responses[uid] = MarketSimulationStateUpdate(**response_data)
-            except Exception as e:
-                bt.logging.error(f"Error reconstructing UID {uid}: {e}")
-    bt.logging.info(f"Responses Reconstructed ({time.time()-reconstruct_start:.4f}s).")
+    synapse_responses = result['responses']
     
     bt.logging.info(f"Query Completed ({time.time()-query_start:.4f}s).")
     

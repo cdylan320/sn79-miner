@@ -133,6 +133,27 @@ def add_im_validator_args(cls, parser):
         type=int,
         help="Number of previous liquidation value observations to use for Sharpe ratio calculation.",
         default=3600,
+    )    
+    
+    parser.add_argument(
+        "--scoring.sharpe.unrealized_weight",
+        type=int,
+        help="The weight assigned to unrealized PnL score in the reward function.",
+        default=0.5,
+    )
+    
+    parser.add_argument(
+        "--scoring.sharpe.realized_weight",
+        type=int,
+        help="The weight assigned to realized PnL score in the reward function.",
+        default=0.5,
+    )
+    
+    parser.add_argument(
+        "--scoring.sharpe.min_realized_observations",
+        type=int,
+        help="The minimum number of realized PnL observations (round-trips) required in the assessment window for realized Sharpe score to be assigned.",
+        default=10,
     )
 
     parser.add_argument(
@@ -175,6 +196,20 @@ def add_im_validator_args(cls, parser):
         type=float,
         help="The number of times within each `trade_volume_assessment_period` that miner agents are able to trade the equivalent in volume to their initial capital allocation value before they are restricted from further activity.",
         default=20.0,
+    )
+
+    parser.add_argument(
+        "--scoring.inventory.min_balance_ratio_multiplier",
+        type=float,
+        help="The minimum value for the multiplier applied to Sharpe scores to penalize holding of small ratio of BASE currency.",
+        default=0.5,
+    )
+
+    parser.add_argument(
+        "--scoring.inventory.max_balance_ratio_multiplier",
+        type=float,
+        help="The maximum value for the multiplier applied to Sharpe scores to reward holding larger ratio of BASE currency.",
+        default=1.2,
     )
 
     parser.add_argument(
