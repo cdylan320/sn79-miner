@@ -65,6 +65,7 @@ Each log file contains:
 # Service management
 ./manage_miner.sh start    # Start service
 ./manage_miner.sh stop     # Stop service
+./manage_miner.sh remove   # Stop and completely remove service
 ./manage_miner.sh restart  # Restart service
 ./manage_miner.sh status   # Show status
 
@@ -159,6 +160,9 @@ BOOK BTC/USD: Training Progress 45/60
 ```bash
 # Immediate stop
 ./manage_miner.sh stop
+
+# Complete removal (stops and cleans up)
+./manage_miner.sh remove
 
 # Force kill if needed
 pkill -f "python miner.py"

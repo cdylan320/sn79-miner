@@ -74,6 +74,64 @@ case "$1" in
         fi
         ;;
 
+    remove)
+        echo "🗑️ Removing TAOS Miner Service..."
+
+        # First stop the service
+        if check_systemd; then
+            echo "Stopping systemd service..."
+            sudo systemctl stop taos-miner 2>/dev/null || true
+            sudo systemctl disable taos-miner 2>/dev/null || true
+
+            echo "Removing systemd service file..."
+            sudo rm -f /etc/systemd/system/taos-miner.service
+            sudo systemctl daemon-reload
+            echo "✅ Systemd service completely removed"
+        else
+            echo "Stopping background process..."
+            if [ -f "$PID_FILE" ] && kill -0 $(cat "$PID_FILE") 2>/dev/null; then
+                MINER_PID=$(cat "$PID_FILE")
+                echo "Stopping miner (PID: $MINER_PID)..."
+                kill $MINER_PID 2>/dev/null || kill -9 $MINER_PID 2>/dev/null
+                rm -f "$PID_FILE"
+                echo "✅ Background process stopped"
+            else
+                echo "No running process found"
+            fi
+        fi
+
+        # Ask about cleaning up logs
+        echo ""
+        echo "🧹 Clean up options:"
+        echo "1. Keep logs (recommended for debugging)"
+        echo "2. Remove all logs"
+        echo "3. Remove old logs only (keep last 3)"
+        read -p "Choose cleanup option (1-3) [1]: " cleanup_choice
+
+        case "$cleanup_choice" in
+            2)
+                echo "Removing all log files..."
+                rm -rf "$LOG_DIR"
+                echo "✅ All logs removed"
+                ;;
+            3)
+                echo "Removing old log files (keeping last 3)..."
+                if [ -d "$LOG_DIR" ]; then
+                    cd "$LOG_DIR"
+                    ls -t *.log 2>/dev/null | tail -n +4 | xargs -r rm -f
+                    echo "✅ Old logs cleaned"
+                fi
+                ;;
+            *)
+                echo "Keeping all logs"
+                ;;
+        esac
+
+        echo ""
+        echo "🎯 Service removal complete!"
+        echo "To restart the service later, run: ./manage_miner.sh start"
+        ;;
+
     restart)
         echo "🔄 Restarting TAOS Miner..."
         $0 stop
@@ -193,12 +251,13 @@ case "$1" in
     *)
         echo "🎯 TAOS Miner Management Script"
         echo ""
-        echo "Usage: $0 {start|start_simple|stop|restart|status|logs|journal|clean}"
+        echo "Usage: $0 {start|start_simple|stop|remove|restart|status|logs|journal|clean}"
         echo ""
         echo "Commands:"
         echo "  start        - Auto-detect: systemd or background mode"
         echo "  start_simple - Force background mode (for containers)"
         echo "  stop         - Stop miner service/process"
+        echo "  remove       - Stop and completely remove service/logs"
         echo "  restart      - Restart miner"
         echo "  status       - Show status and recent logs"
         echo "  logs         - Show latest log file contents"
