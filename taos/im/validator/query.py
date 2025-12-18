@@ -168,7 +168,7 @@ class QueryService:
             for uid in synapses.keys():
                 if uid not in deregistered_uids:
                     all_miner_volumes[uid] = {
-                        book_id: volume_sums.get((uid,book_id), 0.0)
+                        book_id: volume_sums.get(uid, {}).get(book_id, 0.0)
                         for book_id in range(book_count)
                     }
 

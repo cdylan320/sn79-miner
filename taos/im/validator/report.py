@@ -52,12 +52,12 @@ class ReportingService:
         self.request_shm = posix_ipc.SharedMemory(
             "/validator-report-data",
             flags=posix_ipc.O_CREAT,
-            size=500 * 1024 * 1024
+            size=1000 * 1024 * 1024
         )
         self.response_shm = posix_ipc.SharedMemory(
             f"/validator-report-response-data",
             flags=posix_ipc.O_CREAT,
-            size=50 * 1024 * 1024
+            size=100 * 1024 * 1024
         )
         
         self.request_mem = mmap.mmap(self.request_shm.fd, self.request_shm.size)
