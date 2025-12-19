@@ -1,13 +1,17 @@
 #!/bin/bash
-ENDPOINT=wss://entrypoint-finney.opentensor.ai:443
+ENDPOINT=wss://test.finney.opentensor.ai:443
 WALLET_PATH=/home/ocean/.bittensor/wallets/
 WALLET_NAME=cold_draven
 HOTKEY_NAME=miner
-NETUID=79
+NETUID=366
+NETWORK=test
 AXON_PORT=8091
+AXON_IP=0.0.0.0
+EXTERNAL_IP=185.61.165.201
+EXTERNAL_PORT=8091
 AGENT_PATH=/home/ocean/.taos/agents
 AGENT_NAME=SimpleRegressorAgent
-AGENT_PARAMS=(min_quantity=0.1 max_quantity=1.0 expiry_period=200 model=PassiveAggressiveRegressor signal_threshold=0.0025)
+AGENT_PARAMS=(min_quantity=1.0 max_quantity=5.0 expiry_period=200 model=PassiveAggressiveRegressor signal_threshold=0.0025)
 LOG_LEVEL=info
 while getopts e:p:w:h:u:a:g:n:m:l: flag
 do
@@ -70,11 +74,12 @@ fi
 # Run miner directly (without pm2 for now) - ensure we stay in the virtual environment
 cd taos/im/neurons
 echo "Starting miner..."
-echo "Command: python miner.py --netuid $NETUID --subtensor.chain_endpoint $ENDPOINT --wallet.path $WALLET_PATH --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME --axon.port $AXON_PORT --logging.debug --agent.path $AGENT_PATH --agent.name $AGENT_NAME --agent.params ${AGENT_PARAMS[@]} --logging.$LOG_LEVEL"
+echo "Command: python miner.py --netuid $NETUID --subtensor.chain_endpoint $ENDPOINT --subtensor.network $NETWORK --wallet.path $WALLET_PATH --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME --axon.port $AXON_PORT --axon.ip $AXON_IP --axon.external_ip $EXTERNAL_IP --axon.external_port $EXTERNAL_PORT --logging.debug --agent.path $AGENT_PATH --agent.name $AGENT_NAME --agent.params ${AGENT_PARAMS[@]} --logging.$LOG_LEVEL"
 
-# Ensure environment variables are set for the python process
+# Ensure environment variables are set for the python process BEFORE importing bittensor
 export HOME="/home/ocean"
 export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
+export PYTHONPATH="/home/ocean/.local/lib/python3.11/site-packages:$PYTHONPATH"
 
 # Use exec to replace the shell with python, ensuring it stays in the virtual environment
-exec python miner.py --netuid $NETUID --subtensor.chain_endpoint $ENDPOINT --wallet.path $WALLET_PATH --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME --axon.port $AXON_PORT --logging.debug --agent.path $AGENT_PATH --agent.name $AGENT_NAME --agent.params "${AGENT_PARAMS[@]}" --logging.$LOG_LEVEL
+exec python miner.py --netuid $NETUID --subtensor.chain_endpoint $ENDPOINT --subtensor.network $NETWORK --wallet.path $WALLET_PATH --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME --axon.port $AXON_PORT --axon.ip $AXON_IP --axon.external_ip $EXTERNAL_IP --axon.external_port $EXTERNAL_PORT --logging.debug --agent.path $AGENT_PATH --agent.name $AGENT_NAME --agent.params "${AGENT_PARAMS[@]}" --logging.$LOG_LEVEL
