@@ -5,8 +5,9 @@ import time
 from pathlib import Path
 
 # Set wallet path
-os.environ.setdefault("BT_WALLET_PATH", "/home/ocean/.bittensor/wallets")
-os.environ["HOME"] = "/home/ocean"
+user_home = os.path.expanduser('~')
+os.environ.setdefault("BT_WALLET_PATH", os.path.join(user_home, '.bittensor', 'wallets'))
+os.environ["HOME"] = user_home
 
 from bittensor_wallet import Wallet
 from bittensor.core.subtensor import Subtensor

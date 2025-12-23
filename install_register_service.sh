@@ -6,10 +6,11 @@ set -euo pipefail
 
 SERVICE_NAME="taos-register"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-WORKDIR="/home/ocean/Draven/sn79-miner"
+# Get the script directory dynamically
+WORKDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${WORKDIR}/miner.env"
 LOG_FILE="${WORKDIR}/pow.log"
-USER_NAME="ocean"
+USER_NAME="dev"
 
 cat <<EOF | sudo tee "${SERVICE_FILE}" >/dev/null
 [Unit]

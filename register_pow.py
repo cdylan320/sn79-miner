@@ -10,9 +10,10 @@ import re
 from pathlib import Path
 
 # Set wallet path before importing Bittensor to avoid permission issues
-os.environ.setdefault("BT_WALLET_PATH", "/home/ocean/.bittensor/wallets")
+user_home = os.path.expanduser('~')
+os.environ.setdefault("BT_WALLET_PATH", os.path.join(user_home, '.bittensor', 'wallets'))
 # Override HOME to ensure wallet directory is created in the right place
-os.environ["HOME"] = "/home/ocean"
+os.environ["HOME"] = user_home
 
 from bittensor_wallet import Wallet
 from bittensor.core.subtensor import Subtensor

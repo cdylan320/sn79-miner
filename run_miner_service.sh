@@ -33,4 +33,4 @@ cd "$SCRIPT_DIR"
 
 # Run miner with logging
 echo "Starting miner..." | tee -a "$LOG_FILE"
-./run_miner.sh -e test -w cold_draven -h miner -u 366 2>&1 | tee -a "$LOG_FILE"
+./run_miner.sh -e test -w cold_draven -h default -u 366 2>&1 | tee -a "$LOG_FILE"

@@ -11,11 +11,13 @@ import tempfile
 from pathlib import Path
 
 # Set environment variables (should be set by wrapper script, but setting as fallback)
-os.environ.setdefault("HOME", "/home/ocean")
-os.environ.setdefault("BT_WALLET_PATH", "/home/ocean/.bittensor/wallets")
+user_home = os.path.expanduser('~')
+os.environ.setdefault("HOME", user_home)
+os.environ.setdefault("BT_WALLET_PATH", os.path.join(user_home, '.bittensor', 'wallets'))
 
 # Add project to path
-sys.path.insert(0, '/home/ocean/Draven/sn79-miner')
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, script_dir)
 
 # Create a temporary directory for testing
 TEST_DIR = tempfile.mkdtemp(prefix="taos_test_")
@@ -28,11 +30,11 @@ def test_agent_directly():
 
     try:
         # Import the agent
-        agent_path = "/home/ocean/.taos/agents/SimpleRegressorAgent.py"
+        agent_path = os.path.join(user_home, '.taos', 'agents', 'SimpleRegressorAgent.py')
         if not os.path.exists(agent_path):
             # Copy agent if it doesn't exist
             if os.path.exists("agents/SimpleRegressorAgent.py"):
-                os.makedirs("/home/ocean/.taos/agents", exist_ok=True)
+                os.makedirs(os.path.join(user_home, '.taos', 'agents'), exist_ok=True)
                 import shutil
                 shutil.copy("agents/SimpleRegressorAgent.py", agent_path)
                 print("✅ Copied agent to test location")

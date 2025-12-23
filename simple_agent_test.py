@@ -7,11 +7,13 @@ import sys
 import tempfile
 
 # Set environment variables BEFORE importing anything that uses bittensor
-os.environ.setdefault("HOME", "/home/ocean")
-os.environ.setdefault("BT_WALLET_PATH", "/home/ocean/.bittensor/wallets")
+user_home = os.path.expanduser('~')
+os.environ.setdefault("HOME", user_home)
+os.environ.setdefault("BT_WALLET_PATH", os.path.join(user_home, '.bittensor', 'wallets'))
 
 # Add project to path
-sys.path.insert(0, '/home/ocean/Draven/sn79-miner')
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, script_dir)
 
 def test_agent_core():
     """Test the agent's core prediction logic."""
@@ -20,7 +22,7 @@ def test_agent_core():
 
     try:
         # Ensure wallets directory exists
-        wallets_dir = "/home/ocean/.bittensor/wallets"
+        wallets_dir = os.path.join(user_home, '.bittensor', 'wallets')
         os.makedirs(wallets_dir, exist_ok=True)
         print(f"✅ Wallets directory ready: {wallets_dir}")
         # Create a temporary directory for testing
@@ -28,10 +30,10 @@ def test_agent_core():
         print(f"📁 Test directory: {test_dir}")
 
         # Import the agent
-        agent_path = "/home/ocean/.taos/agents/SimpleRegressorAgent.py"
+        agent_path = os.path.join(user_home, '.taos', 'agents', 'SimpleRegressorAgent.py')
         if not os.path.exists(agent_path):
             if os.path.exists("agents/SimpleRegressorAgent.py"):
-                os.makedirs("/home/ocean/.taos/agents", exist_ok=True)
+                os.makedirs(os.path.join(user_home, '.taos', 'agents'), exist_ok=True)
                 import shutil
                 shutil.copy("agents/SimpleRegressorAgent.py", agent_path)
                 print("✅ Copied agent")

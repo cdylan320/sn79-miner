@@ -9,7 +9,7 @@ AXON_PORT=8091
 AXON_IP=0.0.0.0
 EXTERNAL_IP=154.38.187.29
 EXTERNAL_PORT=8091
-AGENT_PATH=/home/dev/.taos/agents
+AGENT_PATH=$HOME/.taos/agents
 AGENT_NAME=SimpleRegressorAgent
 AGENT_PARAMS=(min_quantity=1.0 max_quantity=5.0 expiry_period=200 model=PassiveAggressiveRegressor signal_threshold=0.0025)
 LOG_LEVEL=info

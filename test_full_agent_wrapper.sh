@@ -1,15 +1,16 @@
 #!/bin/bash
 # Wrapper script to test full agent pipeline with correct environment variables
 
-cd /home/ocean/Draven/sn79-miner
+# Get the script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 source venv/bin/activate
 
 # Set environment variables before running Python
-export HOME="/home/ocean"
-export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
+export BT_WALLET_PATH="$HOME/.bittensor/wallets"
 
 # Ensure wallets directory exists
-mkdir -p "/home/ocean/.bittensor/wallets"
+mkdir -p "$HOME/.bittensor/wallets"
 
 echo "🏠 HOME: $HOME"
 echo "💰 BT_WALLET_PATH: $BT_WALLET_PATH"

@@ -1,8 +1,9 @@
 #!/bin/bash
 # TAOS Miner Management Script
 
-SERVICE_FILE="/home/ocean/Draven/sn79-miner/taos-miner.service"
-SCRIPT_DIR="/home/ocean/Draven/sn79-miner"
+# Use dynamic paths based on current user
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVICE_FILE="$SCRIPT_DIR/taos-miner.service"
 LOG_DIR="$SCRIPT_DIR/logs"
 PID_FILE="$SCRIPT_DIR/miner.pid"
 

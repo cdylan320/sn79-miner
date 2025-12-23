@@ -15,7 +15,7 @@ fi
 
 # ---- User-configurable vars -------------------------------------------------
 VENV="${VENV:-$SCRIPT_DIR/.venv}"
-JSON_PATH="${JSON_PATH:-/home/ocean/Draven/sn79-miner/bittensor.json}"
+JSON_PATH="${JSON_PATH:-$SCRIPT_DIR/bittensor.json}"
 JSON_PASSWORD="${JSON_PASSWORD:-}"
 WALLET_NAME="${WALLET_NAME:-cold_draven}"
 HOTKEY_NAME="${HOTKEY_NAME:-miner}"
@@ -42,7 +42,7 @@ mkdir -p "${WALLET_PATH}"
 export BT_WALLET_PATH="${WALLET_PATH}"
 # If HOME resolves to /root, force it to the current user to avoid permission issues
 if [[ "${HOME}" == "/root" ]]; then
-  export HOME="/home/ocean"
+  export HOME="$HOME"
 fi
 
 # ---- Logging to file --------------------------------------------------------
