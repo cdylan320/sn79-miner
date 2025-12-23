@@ -79,6 +79,16 @@ class BaseMinerNeuron(BaseNeuron):
             blacklist_fn=self.blacklist_update,
             priority_fn=self.priority_update,
         )
+
+        # Add HTTP route handlers to prevent UnknownSynapseError for web browser requests
+        @self.axon.app.get("/")
+        async def root():
+            return {"message": "Bittensor Miner", "status": "running", "uid": self.uid}
+
+        @self.axon.app.get("/favicon.ico")
+        async def favicon():
+            return {"error": "No favicon available"}
+
         bt.logging.info(f"Axon created: {self.axon}")
 
         # Instantiate runners

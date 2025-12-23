@@ -1,15 +1,15 @@
 #!/bin/bash
 ENDPOINT=wss://test.finney.opentensor.ai:443
-WALLET_PATH=/home/ocean/.bittensor/wallets/
+WALLET_PATH="$HOME/.bittensor/wallets/"
 WALLET_NAME=cold_draven
-HOTKEY_NAME=miner
+HOTKEY_NAME=default
 NETUID=366
 NETWORK=test
 AXON_PORT=8091
 AXON_IP=0.0.0.0
-EXTERNAL_IP=185.61.165.201
+EXTERNAL_IP=154.38.187.29
 EXTERNAL_PORT=8091
-AGENT_PATH=/home/ocean/.taos/agents
+AGENT_PATH=/home/dev/.taos/agents
 AGENT_NAME=SimpleRegressorAgent
 AGENT_PARAMS=(min_quantity=1.0 max_quantity=5.0 expiry_period=200 model=PassiveAggressiveRegressor signal_threshold=0.0025)
 LOG_LEVEL=info
@@ -42,16 +42,16 @@ echo "AGENT_PARAMS: ${AGENT_PARAMS[@]}"
 git pull
 
 # Set up environment variables
-export HOME="/home/ocean"
-export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
-export PYTHONPATH="/home/ocean/.local/lib/python3.11/site-packages:/home/ocean/Draven/sn79-miner:$PYTHONPATH"
+export HOME="$HOME"
+export BT_WALLET_PATH="$HOME/.bittensor/wallets"
+export PYTHONPATH="$HOME/.local/lib/python3.11/site-packages:$HOME/sn79-miner:$PYTHONPATH"
 
 # Create wallet directory if it doesn't exist
 mkdir -p "$BT_WALLET_PATH"
 
 # Try to activate btcli virtual environment if it exists
-if [ -f "/home/ocean/btcli-latest/bin/activate" ]; then
-    source /home/ocean/btcli-latest/bin/activate
+if [ -f "$HOME/btcli-latest/bin/activate" ]; then
+    source $HOME/btcli-latest/bin/activate
     echo "Activated btcli virtual environment"
 else
     echo "btcli virtual environment not found, continuing with current environment"
@@ -77,9 +77,9 @@ echo "Starting miner..."
 echo "Command: python miner.py --netuid $NETUID --subtensor.chain_endpoint $ENDPOINT --subtensor.network $NETWORK --wallet.path $WALLET_PATH --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME --axon.port $AXON_PORT --axon.ip $AXON_IP --axon.external_ip $EXTERNAL_IP --axon.external_port $EXTERNAL_PORT --logging.debug --agent.path $AGENT_PATH --agent.name $AGENT_NAME --agent.params ${AGENT_PARAMS[@]} --logging.$LOG_LEVEL"
 
 # Ensure environment variables are set for the python process BEFORE importing bittensor
-export HOME="/home/ocean"
-export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
-export PYTHONPATH="/home/ocean/.local/lib/python3.11/site-packages:$PYTHONPATH"
+export HOME="$HOME"
+export BT_WALLET_PATH="$HOME/.bittensor/wallets"
+export PYTHONPATH="$HOME/.local/lib/python3.11/site-packages:$PYTHONPATH"
 
 # Use exec to replace the shell with python, ensuring it stays in the virtual environment
 exec python miner.py --netuid $NETUID --subtensor.chain_endpoint $ENDPOINT --subtensor.network $NETWORK --wallet.path $WALLET_PATH --wallet.name $WALLET_NAME --wallet.hotkey $HOTKEY_NAME --axon.port $AXON_PORT --axon.ip $AXON_IP --axon.external_ip $EXTERNAL_IP --axon.external_port $EXTERNAL_PORT --logging.debug --agent.path $AGENT_PATH --agent.name $AGENT_NAME --agent.params "${AGENT_PARAMS[@]}" --logging.$LOG_LEVEL

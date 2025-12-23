@@ -21,17 +21,19 @@ else:
     print("⚠️  miner.env file not found")
 
 # Set additional environment variables needed for bittensor
-os.environ['HOME'] = '/home/ocean'
-os.environ['BT_WALLET_PATH'] = '/home/ocean/.bittensor/wallets'
+# Use current user's home directory
+user_home = os.path.expanduser('~')
+os.environ['HOME'] = user_home
+os.environ['BT_WALLET_PATH'] = os.path.join(user_home, '.bittensor', 'wallets')
 
 # Now import bittensor after environment is set
-from substrateinterface import Keypair
 import bittensor as bt
 
 def decrypt_and_import_wallet():
-    # Load the JSON wallet
+    # Load the JSON wallet as string (bittensor expects JSON string, not dict)
     with open('bittensor.json', 'r') as f:
-        wallet_data = json.load(f)
+        wallet_json_str = f.read()
+    wallet_data = json.loads(wallet_json_str)  # Parse for display purposes
     
     print(f"Wallet name: {wallet_data['meta']['name']}")
     print(f"Address: {wallet_data['address']}")
@@ -47,7 +49,7 @@ def decrypt_and_import_wallet():
     
     try:
         # Decrypt the wallet
-        keypair = Keypair.create_from_encrypted_json(wallet_data, password)
+        keypair = bt.Keypair.create_from_encrypted_json(wallet_json_str, password)
         print("✅ Successfully decrypted wallet!")
         print(f"SS58 Address: {keypair.ss58_address}")
         
@@ -59,27 +61,23 @@ def decrypt_and_import_wallet():
             # This is the coldkey, so we'll create it as the coldkey
             
             # Create the wallet directory structure
-            wallet_dir = '/home/ocean/.bittensor/wallets/cold_draven'
+            wallet_dir = os.path.join(user_home, '.bittensor', 'wallets', 'cold_draven')
             hotkey_dir = os.path.join(wallet_dir, 'hotkeys')
             os.makedirs(wallet_dir, exist_ok=True)
             os.makedirs(hotkey_dir, exist_ok=True)
             
-            # Create Bittensor keypair from the private key
-            private_key_hex = keypair.private_key.hex()
-            bt_keypair = bt.Keypair.create_from_private_key(private_key_hex)
-            
-            # Create Bittensor wallet and set the coldkey
+            # Create Bittensor wallet and set the coldkey directly from the decrypted keypair
             wallet = bt.Wallet('cold_draven')
-            wallet.set_coldkey(bt_keypair, encrypt=False, overwrite=True)
+            wallet.set_coldkey(keypair, encrypt=False, overwrite=True)
 
             # Also set the hotkey (same key since user uses same key for both)
-            wallet.set_hotkey(bt_keypair, encrypt=False, overwrite=True)
+            wallet.set_hotkey(keypair, encrypt=False, overwrite=True)
             
             print("✅ Saved wallet as Bittensor coldkey and hotkey!")
             print("🔄 Testing wallet load...")
             
             # Test loading the wallet
-            test_wallet = bt.Wallet('cold_draven', 'miner')
+            test_wallet = bt.Wallet('cold_draven', 'default')
             print(f"✅ Wallet loaded! Coldkey: {test_wallet.coldkey.ss58_address}, Hotkey: {test_wallet.hotkey.ss58_address}")
             
             return True

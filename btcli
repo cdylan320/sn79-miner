@@ -3,8 +3,8 @@
 set -e
 
 # Force proper paths
-export HOME="/home/ocean"
-export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
+export HOME="$HOME"
+export BT_WALLET_PATH="$HOME/.bittensor/wallets"
 mkdir -p "$BT_WALLET_PATH"
 
 # Load environment variables from miner.env
@@ -18,10 +18,10 @@ if [[ -f "${ENV_FILE}" ]]; then
 fi
 
 # Set additional environment variables needed for registration
-export JSON_PATH="${JSON_PATH:-/home/ocean/Draven/sn79-miner/bittensor.json}"
+export JSON_PATH="${JSON_PATH:-$HOME/sn79-miner/bittensor.json}"
 export JSON_PASSWORD="${JSON_PASSWORD:-}"
 export WALLET_NAME="${WALLET_NAME:-cold_draven}"
-export HOTKEY_NAME="${HOTKEY_NAME:-miner}"
+export HOTKEY_NAME="${HOTKEY_NAME:-default}"
 export WALLET_PATH="${WALLET_PATH:-$HOME/.bittensor/wallets}"
 export NETUID="${NETUID:-366}"
 export NETWORK="${NETWORK:-test}"
@@ -37,8 +37,8 @@ export BT_LOGGING="${BT_LOGGING:-DEBUG}"
 export BT_PROGRESS="${BT_PROGRESS:-1}"
 
 # Use btcli from project's virtual environment
-export HOME="/home/ocean"
-export BT_WALLET_PATH="/home/ocean/.bittensor/wallets"
+export HOME="$HOME"
+export BT_WALLET_PATH="$HOME/.bittensor/wallets"
 
 # Activate the project's virtual environment (contains btcli)
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
